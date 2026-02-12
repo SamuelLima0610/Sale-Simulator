@@ -22,6 +22,26 @@ if __name__ == "__main__":
     
     use_mock = (choice == "2")
     
+    # Perguntar se deseja carregar conversa anterior
+    print("\n" + "=" * 60)
+    print("Deseja carregar uma conversa anterior?")
+    print("1 - SIM (fornecer conversation_id)")
+    print("2 - NÃO (iniciar nova conversa)")
+    print("-" * 60)
+    
+    conversation_id = None
+    while True:
+        load_choice = input("\nDigite 1 ou 2: ").strip()
+        if load_choice in ["1", "2"]:
+            break
+        print("Opção inválida!")
+    
+    if load_choice == "1":
+        conversation_id = input("\nDigite o conversation_id: ").strip()
+        if not conversation_id:
+            print("ID inválido. Iniciando nova conversa...")
+            conversation_id = None
+    
     # System message otimizado para simular um comprador realista
     system_message = """
     Você é um comprador potencial interessado em avaliar produtos ou serviços. Seu papel é participar de uma simulação de venda realista.
@@ -34,6 +54,7 @@ if __name__ == "__main__":
     - Apresenta objeções realistas quando apropriado (preço, concorrência, necessidade, urgência)
     - Responde de forma natural e conversacional, como um cliente real
     - Sua decisão de compra depende de quão bem o vendedor atende suas necessidades
+    - Só fornece feedback quando solicitado explicitamente (digitando "FEEDBACK")
 
     ## DURANTE A CONVERSA:
     1. Comece demonstrando interesse inicial, mas com reservas
@@ -72,17 +93,26 @@ if __name__ == "__main__":
     if use_mock:
         conversation = MockConversationContext(
             model="gpt-4o-mini",
-            system_message=system_message
+            system_message=system_message if not conversation_id else None,
+            conversation_id=conversation_id
         )
         audio_recorder = MockAudioRecorder()
+        if conversation_id:
+            print("\n⚠️ Modo TESTE não suporta carregar conversas anteriores")
+            print("Iniciando nova conversa...")
         print("\n✓ Modo TESTE ativo (sem custo, respostas simuladas)")
     else:
         conversation = ConversationContext(
             model="gpt-4o-mini",
-            system_message=system_message
+            system_message=system_message if not conversation_id else None,
+            conversation_id=conversation_id
         )
         audio_recorder = AudioRecorder()
         print("\n✓ Modo REAL ativo (usando API OpenAI)")
+        if conversation_id:
+            print(f"✓ Conversation ID: {conversation_id}")
+        else:
+            print(f"✓ Nova conversa iniciada - ID: {conversation.conversation_id}")
     
     print("=" * 60)
     print("\nVocê é o VENDEDOR. O comprador está esperando sua apresentação.")

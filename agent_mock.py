@@ -7,11 +7,12 @@ import random
 class MockConversationContext:
     """Versão simulada que não faz chamadas reais à API"""
     
-    def __init__(self, model="gpt-4o-mini", system_message=None):
+    def __init__(self, model="gpt-4o-mini", system_message=None, conversation_id=None):
         self.model = model
         self.system_message = system_message
         self.messages = []
         self.interaction_count = 0
+        self.conversation_id = conversation_id
         
         if system_message:
             self.messages.append({"role": "system", "content": system_message})
