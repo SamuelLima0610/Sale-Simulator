@@ -1,7 +1,6 @@
 import streamlit as st
 from agent import ConversationContext
 from agent_mock import MockConversationContext
-from audio_recorder import AudioRecorder, MockAudioRecorder
 
 # System message otimizado para simular um comprador realista
 SYSTEM_MESSAGE = """
@@ -62,7 +61,6 @@ st.set_page_config(
 if "initialized" not in st.session_state:
     st.session_state.initialized = False
     st.session_state.conversation = None
-    st.session_state.audio_recorder = None
     st.session_state.chat_history = []
     st.session_state.use_mock = True
     st.session_state.conversation_id = None
@@ -90,26 +88,9 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # Carregar conversa anterior
-    st.subheader("Conversa Anterior")
-    load_previous = st.checkbox("Carregar conversa anterior")
+    # (Removido) Interface para carregar conversa anterior por ID
     
-    if load_previous:
-        conversation_id_input = st.text_input("ID da Conversa:", placeholder="20240101_120000")
-        if st.button("Carregar"):
-            if conversation_id_input.strip():
-                if st.session_state.use_mock:
-                    st.error("❌ Modo TESTE não suporta carregar conversas anteriores")
-                else:
-                    st.session_state.conversation_id = conversation_id_input.strip()
-                    st.session_state.initialized = False
-                    st.session_state.chat_history = []  # Limpar histórico antes de carregar
-                    st.success(f"✅ Carregando conversa {conversation_id_input.strip()}...")
-                    st.rerun()
-            else:
-                st.error("❌ ID inválido")
-    
-    if st.button("🔄 Nova Conversa"):
+    if st.button("🔄 Nova Conversa", use_container_width=True):
         st.session_state.initialized = False
         st.session_state.conversation = None
         st.session_state.chat_history = []
@@ -137,35 +118,34 @@ if not st.session_state.initialized:
             system_message=SYSTEM_MESSAGE if not st.session_state.conversation_id else None,
             conversation_id=st.session_state.conversation_id
         )
-        st.session_state.audio_recorder = MockAudioRecorder()
     else:
         st.session_state.conversation = ConversationContext(
             model="gpt-4o-mini",
             system_message=SYSTEM_MESSAGE if not st.session_state.conversation_id else None,
             conversation_id=st.session_state.conversation_id
         )
-        st.session_state.audio_recorder = AudioRecorder()
+    
+    # Carregar histórico de chat se conversa anterior foi carregada
+    if st.session_state.conversation_id:
+        # Extrair mensagens do histórico (excluindo system message)
+        loaded_count = 0
+        for msg in st.session_state.conversation.messages:
+            if msg["role"] == "system":
+                continue
+            st.session_state.chat_history.append({
+                "role": msg["role"],
+                "content": msg["content"]
+            })
+            loaded_count += 1
         
-        # Carregar histórico de chat se conversa anterior foi carregada
-        if st.session_state.conversation_id:
-            # Extrair mensagens do histórico (excluindo system message)
-            loaded_count = 0
-            for msg in st.session_state.conversation.messages:
-                if msg["role"] == "system":
-                    continue
-                st.session_state.chat_history.append({
-                    "role": msg["role"],
-                    "content": msg["content"]
-                })
-                loaded_count += 1
-            
-            # Verificar se realmente carregou mensagens
-            if loaded_count == 0:
-                st.warning(f"⚠️ Nenhuma mensagem encontrada para o ID: {st.session_state.conversation_id}")
-                st.session_state.conversation_id = None
+        # Verificar se realmente carregou mensagens
+        if loaded_count == 0:
+            st.warning(f"⚠️ Nenhuma conversa encontrada para o ID: {st.session_state.conversation_id}")
+            st.session_state.conversation_id = None
     
     st.session_state.initialized = True
 
+# ===== INTERFACE PRINCIPAL DO SIMULADOR =====
 # Header principal
 st.title("💼 Simulador de Vendas - Treinamento")
 st.markdown("**Você é o VENDEDOR.** O comprador está esperando sua apresentação.")
@@ -257,7 +237,7 @@ else:
 st.markdown("---")
 st.markdown(
     "<div style='text-align: center; color: gray;'>"
-    "💡 Use o botão 'Nova Conversa' na barra lateral para começar um novo treinamento"
+    "💡 Navegue para 'Visualizar Conversas' na barra lateral para ver seu histórico"
     "</div>",
     unsafe_allow_html=True
 )

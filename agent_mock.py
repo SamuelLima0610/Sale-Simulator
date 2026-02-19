@@ -2,6 +2,8 @@
 Versão mock da classe ConversationContext para testes sem créditos da OpenAI
 """
 import random
+import os
+from csv_reader import GerenciadorCSV
 
 
 class MockConversationContext:
@@ -13,8 +15,12 @@ class MockConversationContext:
         self.messages = []
         self.interaction_count = 0
         self.conversation_id = conversation_id
+        self.context = GerenciadorCSV('dados.csv')  # Será criado em data/dados.csv
         
-        if system_message:
+        # Carregar conversa anterior se conversation_id foi fornecido
+        if conversation_id:
+            self._load_conversation(conversation_id)
+        elif system_message:
             self.messages.append({"role": "system", "content": system_message})
     
     def add_user_message(self, content):
@@ -157,3 +163,43 @@ class MockConversationContext:
     def get_context_size(self):
         """Retorna o número de mensagens no contexto"""
         return len(self.messages)
+    
+    def _load_conversation(self, conversation_id):
+        """
+        Carrega mensagens de uma conversa anterior do CSV
+        
+        Args:
+            conversation_id: ID da conversa a ser carregada
+        """
+        # Buscar todas as mensagens com o conversation_id fornecido
+        messages_data = self.context.search_data({'conversation_id': conversation_id})
+        
+        if not messages_data:
+            print(f"\n⚠️ Nenhuma conversa encontrada com ID: {conversation_id}")
+            return
+        
+        # Ordenar por data para manter a ordem correta
+        messages_data.sort(key=lambda x: x.get('data', ''))
+        
+        print(f"\n📂 Carregando conversa {conversation_id} (MODO MOCK)...")
+        print("=" * 60)
+        
+        # Reconstruir histórico de mensagens
+        for msg_data in messages_data:
+            user_msg = msg_data.get('message', '')
+            assistant_msg = msg_data.get('response', '')
+            
+            # Adicionar mensagens ao histórico
+            self.messages.append({"role": "user", "content": user_msg})
+            self.messages.append({"role": "assistant", "content": assistant_msg})
+            self.interaction_count += 1
+            
+            # Exibir mensagem carregada
+            print(f"\n[{msg_data.get('data', 'N/A')}]")
+            print(f"Vendedor: {user_msg[:80]}..." if len(user_msg) > 80 else f"Vendedor: {user_msg}")
+            print(f"Comprador: {assistant_msg[:80]}..." if len(assistant_msg) > 80 else f"Comprador: {assistant_msg}")
+        
+        print("\n" + "=" * 60)
+        print(f"✓ {len(messages_data)} mensagens carregadas")
+        print(f"Interações: {self.interaction_count}")
+        print("=" * 60 + "\n")

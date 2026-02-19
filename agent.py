@@ -2,7 +2,7 @@ from openai import OpenAI
 import os
 from dotenv import load_dotenv
 
-from gerenciador_csv import GerenciadorCSV
+from csv_reader import GerenciadorCSV
 from datetime import datetime
 
 # Carrega variáveis de ambiente do arquivo .env
