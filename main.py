@@ -1,160 +1,263 @@
-# Exemplo de uso
+import streamlit as st
 from agent import ConversationContext
 from agent_mock import MockConversationContext
 from audio_recorder import AudioRecorder, MockAudioRecorder
 
-if __name__ == "__main__":
-    
-    # Perguntar qual versão usar
-    print("=" * 60)
-    print("SIMULADOR DE VENDAS - Treinamento")
-    print("=" * 60)
-    print("\nEscolha o modo:")
-    print("1 - MODO REAL (requer créditos OpenAI)")
-    print("2 - MODO TESTE (gratuito, sem API)")
-    print("-" * 60)
-    
-    while True:
-        choice = input("\nDigite 1 ou 2: ").strip()
-        if choice in ["1", "2"]:
-            break
-        print("Opção inválida!")
-    
-    use_mock = (choice == "2")
-    
-    # Perguntar se deseja carregar conversa anterior
-    print("\n" + "=" * 60)
-    print("Deseja carregar uma conversa anterior?")
-    print("1 - SIM (fornecer conversation_id)")
-    print("2 - NÃO (iniciar nova conversa)")
-    print("-" * 60)
-    
-    conversation_id = None
-    while True:
-        load_choice = input("\nDigite 1 ou 2: ").strip()
-        if load_choice in ["1", "2"]:
-            break
-        print("Opção inválida!")
-    
-    if load_choice == "1":
-        conversation_id = input("\nDigite o conversation_id: ").strip()
-        if not conversation_id:
-            print("ID inválido. Iniciando nova conversa...")
-            conversation_id = None
-    
-    # System message otimizado para simular um comprador realista
-    system_message = """
-    Você é um comprador potencial interessado em avaliar produtos ou serviços. Seu papel é participar de uma simulação de venda realista.
+# System message otimizado para simular um comprador realista
+SYSTEM_MESSAGE = """
+Você é um comprador potencial interessado em avaliar produtos ou serviços. Seu papel é participar de uma simulação de venda realista.
 
-    ## SEU PERFIL E COMPORTAMENTO:
-    - Você é um comprador criterioso, mas aberto a ofertas convincentes
-    - Tem necessidades e dúvidas genuínas sobre o produto/serviço
-    - Seu orçamento é limitado, mas está disposto a investir se ver valor
-    - Faz perguntas relevantes sobre características, benefícios, preço e condições
-    - Apresenta objeções realistas quando apropriado (preço, concorrência, necessidade, urgência)
-    - Responde de forma natural e conversacional, como um cliente real
-    - Sua decisão de compra depende de quão bem o vendedor atende suas necessidades
-    - Só fornece feedback quando solicitado explicitamente (digitando "FEEDBACK")
+## SEU PERFIL E COMPORTAMENTO:
+- Você é um comprador criterioso, mas aberto a ofertas convincentes
+- Tem necessidades e dúvidas genuínas sobre o produto/serviço
+- Seu orçamento é limitado, mas está disposto a investir se ver valor
+- Faz perguntas relevantes sobre características, benefícios, preço e condições
+- Apresenta objeções realistas quando apropriado (preço, concorrência, necessidade, urgência)
+- Responde de forma natural e conversacional, como um cliente real
+- Sua decisão de compra depende de quão bem o vendedor atende suas necessidades
+- Só fornece feedback quando solicitado explicitamente (digitando "FEEDBACK")
 
-    ## DURANTE A CONVERSA:
-    1. Comece demonstrando interesse inicial, mas com reservas
-    2. Faça perguntas sobre características, benefícios e diferenciais
-    3. Apresente 2-3 objeções ao longo da conversa (escolha entre: preço alto, falta de urgência, comparação com concorrentes, dúvidas sobre ROI)
-    4. Avalie como o vendedor lida com suas objeções
-    5. Observe se o vendedor: escuta ativamente, identifica suas necessidades, apresenta soluções, cria rapport, usa técnicas de vendas
-    6. Mantenha o tom realista - nem muito fácil nem impossível de convencer
+## DURANTE A CONVERSA:
+1. Comece demonstrando interesse inicial, mas com reservas
+2. Faça perguntas sobre características, benefícios e diferenciais
+3. Apresente 2-3 objeções ao longo da conversa (escolha entre: preço alto, falta de urgência, comparação com concorrentes, dúvidas sobre ROI)
+4. Avalie como o vendedor lida com suas objeções
+5. Observe se o vendedor: escuta ativamente, identifica suas necessidades, apresenta soluções, cria rapport, usa técnicas de vendas
+6. Mantenha o tom realista - nem muito fácil nem impossível de convencer
 
-    ## QUANDO O VENDEDOR PEDIR FEEDBACK:
-    Forneça uma análise estruturada em português com as seguintes seções:
+## QUANDO O VENDEDOR PEDIR FEEDBACK:
+Forneça uma análise estruturada em português com as seguintes seções:
 
-    **PONTOS FORTES:**
-    - Liste 3-4 aspectos positivos específicos do processo de venda
+**PONTOS FORTES:**
+- Liste 3-4 aspectos positivos específicos do processo de venda
 
-    **PONTOS DE MELHORIA:**
-    - Identifique 2-3 áreas que podem ser aprimoradas
+**PONTOS DE MELHORIA:**
+- Identifique 2-3 áreas que podem ser aprimoradas
 
-    **AVALIAÇÃO POR CRITÉRIO (nota de 0 a 10):**
-    - Rapport e conexão inicial
-    - Identificação de necessidades (perguntas de descoberta)
-    - Apresentação de benefícios (não apenas características)
-    - Tratamento de objeções
-    - Fechamento e call-to-action
-    - Comunicação geral
+**AVALIAÇÃO POR CRITÉRIO (nota de 0 a 10):**
+- Rapport e conexão inicial
+- Identificação de necessidades (perguntas de descoberta)
+- Apresentação de benefícios (não apenas características)
+- Tratamento de objeções
+- Fechamento e call-to-action
+- Comunicação geral
 
-    **NOTA GERAL:** X/10
+**NOTA GERAL:** X/10
 
-    **RECOMENDAÇÕES ESPECÍFICAS:**
-    - Dê 2-3 sugestões práticas e acionáveis
+**RECOMENDAÇÕES ESPECÍFICAS:**
+- Dê 2-3 sugestões práticas e acionáveis
 
-    Seja construtivo, específico e baseie seu feedback em exemplos concretos da conversa.
+Seja construtivo, específico e baseie seu feedback em exemplos concretos da conversa.
 """
 
-    # Criar a conversa (real ou mock)
-    if use_mock:
-        conversation = MockConversationContext(
-            model="gpt-4o-mini",
-            system_message=system_message if not conversation_id else None,
-            conversation_id=conversation_id
-        )
-        audio_recorder = MockAudioRecorder()
-        if conversation_id:
-            print("\n⚠️ Modo TESTE não suporta carregar conversas anteriores")
-            print("Iniciando nova conversa...")
-        print("\n✓ Modo TESTE ativo (sem custo, respostas simuladas)")
+# Configuração da página
+st.set_page_config(
+    page_title="Simulador de Vendas - Treinamento",
+    page_icon="💼",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Inicializar session_state
+if "initialized" not in st.session_state:
+    st.session_state.initialized = False
+    st.session_state.conversation = None
+    st.session_state.audio_recorder = None
+    st.session_state.chat_history = []
+    st.session_state.use_mock = True
+    st.session_state.conversation_id = None
+    st.session_state.feedback_received = False
+
+# Sidebar - Configurações
+with st.sidebar:
+    st.title("⚙️ Configurações")
+    
+    st.markdown("---")
+    
+    # Modo de operação
+    mode = st.radio(
+        "Modo de Operação:",
+        ["Modo Teste (Gratuito)", "Modo Real (OpenAI API)"],
+        index=0 if st.session_state.use_mock else 1
+    )
+    
+    st.session_state.use_mock = (mode == "Modo Teste (Gratuito)")
+    
+    if st.session_state.use_mock:
+        st.info("🧪 Modo TESTE ativo\n\nSem custo, respostas simuladas")
     else:
-        conversation = ConversationContext(
+        st.warning("🔴 Modo REAL ativo\n\nRequer créditos OpenAI")
+    
+    st.markdown("---")
+    
+    # Carregar conversa anterior
+    st.subheader("Conversa Anterior")
+    load_previous = st.checkbox("Carregar conversa anterior")
+    
+    if load_previous:
+        conversation_id_input = st.text_input("ID da Conversa:", placeholder="20240101_120000")
+        if st.button("Carregar"):
+            if conversation_id_input.strip():
+                if st.session_state.use_mock:
+                    st.error("❌ Modo TESTE não suporta carregar conversas anteriores")
+                else:
+                    st.session_state.conversation_id = conversation_id_input.strip()
+                    st.session_state.initialized = False
+                    st.session_state.chat_history = []  # Limpar histórico antes de carregar
+                    st.success(f"✅ Carregando conversa {conversation_id_input.strip()}...")
+                    st.rerun()
+            else:
+                st.error("❌ ID inválido")
+    
+    if st.button("🔄 Nova Conversa"):
+        st.session_state.initialized = False
+        st.session_state.conversation = None
+        st.session_state.chat_history = []
+        st.session_state.conversation_id = None
+        st.session_state.feedback_received = False
+        st.rerun()
+    
+    st.markdown("---")
+    
+    # Informações da sessão
+    if st.session_state.initialized and st.session_state.conversation:
+        st.subheader("📊 Informações")
+        st.text(f"ID: {st.session_state.conversation.conversation_id}")
+        st.text(f"Mensagens: {len(st.session_state.chat_history)}")
+        
+        if not st.session_state.use_mock and hasattr(st.session_state.conversation, 'total_tokens_used'):
+            st.text(f"Tokens: {st.session_state.conversation.total_tokens_used}")
+            st.text(f"Custo: ${st.session_state.conversation.total_cost:.4f}")
+
+# Inicializar conversa
+if not st.session_state.initialized:
+    if st.session_state.use_mock:
+        st.session_state.conversation = MockConversationContext(
             model="gpt-4o-mini",
-            system_message=system_message if not conversation_id else None,
-            conversation_id=conversation_id
+            system_message=SYSTEM_MESSAGE if not st.session_state.conversation_id else None,
+            conversation_id=st.session_state.conversation_id
         )
-        audio_recorder = AudioRecorder()
-        print("\n✓ Modo REAL ativo (usando API OpenAI)")
-        if conversation_id:
-            print(f"✓ Conversation ID: {conversation_id}")
-        else:
-            print(f"✓ Nova conversa iniciada - ID: {conversation.conversation_id}")
-    
-    print("=" * 60)
-    print("\nVocê é o VENDEDOR. O comprador está esperando sua apresentação.")
-    print("Para encerrar e receber feedback, digite: 'FEEDBACK'")
-    print("Para gravar áudio ao invés de digitar, digite: 'VOZ'")
-    print("\n" + "-" * 60)
-    
-    # Loop de conversa
-    while True:
-        user_input = input("\nVocê (vendedor): ").strip()
+        st.session_state.audio_recorder = MockAudioRecorder()
+    else:
+        st.session_state.conversation = ConversationContext(
+            model="gpt-4o-mini",
+            system_message=SYSTEM_MESSAGE if not st.session_state.conversation_id else None,
+            conversation_id=st.session_state.conversation_id
+        )
+        st.session_state.audio_recorder = AudioRecorder()
         
-        if not user_input:
-            continue
-        
-        # Opção para gravar áudio
-        if user_input.upper() == "VOZ":
-            try:
-                print("\nPreparando gravação...")
-                duration_input = input("Duração da gravação em segundos (padrão 5): ").strip()
-                duration = int(duration_input) if duration_input else 5
-                
-                user_input = audio_recorder.record_and_transcribe(duration)
-                print(f"\n📝 Transcrição: \"{user_input}\"\n")
-                
-                if not user_input:
-                    print("❌ Não foi possível transcrever. Tente novamente.")
+        # Carregar histórico de chat se conversa anterior foi carregada
+        if st.session_state.conversation_id:
+            # Extrair mensagens do histórico (excluindo system message)
+            loaded_count = 0
+            for msg in st.session_state.conversation.messages:
+                if msg["role"] == "system":
                     continue
-            except Exception as e:
-                print(f"❌ Erro ao gravar/transcrever áudio: {e}")
-                print("Você pode digitar sua mensagem normalmente.")
-                continue
+                st.session_state.chat_history.append({
+                    "role": msg["role"],
+                    "content": msg["content"]
+                })
+                loaded_count += 1
             
-        if user_input.upper() == "FEEDBACK":
-            print("\n" + "=" * 60)
-            print("SOLICITANDO FEEDBACK DO PROCESSO DE VENDA...")
-            print("=" * 60 + "\n")
-            feedback = conversation.send_message(
+            # Verificar se realmente carregou mensagens
+            if loaded_count == 0:
+                st.warning(f"⚠️ Nenhuma mensagem encontrada para o ID: {st.session_state.conversation_id}")
+                st.session_state.conversation_id = None
+    
+    st.session_state.initialized = True
+
+# Header principal
+st.title("💼 Simulador de Vendas - Treinamento")
+st.markdown("**Você é o VENDEDOR.** O comprador está esperando sua apresentação.")
+
+# Mostrar aviso se conversa foi carregada
+if st.session_state.conversation_id and len(st.session_state.chat_history) > 0:
+    st.info(f"📂 Conversa carregada: {st.session_state.conversation_id} ({len(st.session_state.chat_history)} mensagens)")
+
+# Área de chat
+st.markdown("---")
+st.subheader("💬 Conversa")
+
+# Exibir histórico de mensagens
+chat_container = st.container()
+with chat_container:
+    for msg in st.session_state.chat_history:
+        if msg["role"] == "user":
+            with st.chat_message("user", avatar="👤"):
+                st.markdown(f"**Você (vendedor):** {msg['content']}")
+        else:
+            with st.chat_message("assistant", avatar="🤖"):
+                st.markdown(f"**Comprador:** {msg['content']}")
+
+# Input área
+st.markdown("---")
+
+if not st.session_state.feedback_received:
+    col1, col2, col3 = st.columns([6, 2, 2])
+    
+    with col1:
+        user_input = st.text_input(
+            "Sua mensagem:",
+            key="user_input",
+            placeholder="Digite sua mensagem aqui...",
+            label_visibility="collapsed"
+        )
+    
+    with col2:
+        send_button = st.button("📤 Enviar", use_container_width=True)
+    
+    with col3:
+        feedback_button = st.button("📊 Solicitar Feedback", use_container_width=True)
+    
+    # Processar envio de mensagem
+    if send_button and user_input.strip():
+        with st.spinner("Aguardando resposta..."):
+            # Adicionar mensagem do usuário ao histórico
+            st.session_state.chat_history.append({
+                "role": "user",
+                "content": user_input
+            })
+            
+            # Obter resposta do comprador
+            response = st.session_state.conversation.send_message(user_input)
+            
+            # Adicionar resposta ao histórico
+            st.session_state.chat_history.append({
+                "role": "assistant",
+                "content": response
+            })
+        
+        st.rerun()
+    
+    # Processar solicitação de feedback
+    if feedback_button:
+        with st.spinner("Solicitando feedback detalhado..."):
+            feedback = st.session_state.conversation.send_message(
                 "Por favor, forneça agora o feedback detalhado sobre o meu processo de venda."
             )
-            print(f"FEEDBACK DO COMPRADOR:\n\n{feedback}\n")
-            print("=" * 60)
-            break
+            
+            st.session_state.chat_history.append({
+                "role": "user",
+                "content": "FEEDBACK"
+            })
+            
+            st.session_state.chat_history.append({
+                "role": "assistant",
+                "content": feedback
+            })
+            
+            st.session_state.feedback_received = True
         
-        response = conversation.send_message(user_input)
-        print(f"\nComprador: {response}")
+        st.rerun()
+
+else:
+    st.success("✅ Feedback recebido! Inicie uma nova conversa para treinar novamente.")
+
+# Footer
+st.markdown("---")
+st.markdown(
+    "<div style='text-align: center; color: gray;'>"
+    "💡 Use o botão 'Nova Conversa' na barra lateral para começar um novo treinamento"
+    "</div>",
+    unsafe_allow_html=True
+)

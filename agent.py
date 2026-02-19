@@ -35,7 +35,7 @@ class ConversationContext:
             "gpt-3.5-turbo": {"input": 0.50, "output": 1.50},
             "gpt-4": {"input": 30.00, "output": 60.00},
         }
-        self.context = GerenciadorCSV('dados.csv')
+        self.context = GerenciadorCSV('data/dados.csv')
         
         # Carregar conversa anterior se conversation_id foi fornecido
         if conversation_id:
