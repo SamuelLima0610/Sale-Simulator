@@ -17,11 +17,13 @@ class MockConversationContext:
         self.conversation_id = conversation_id
         self.context = GerenciadorCSV('dados.csv')  # Será criado em data/dados.csv
         
+        # Adicionar system message primeiro
+        if system_message:
+            self.messages.append({"role": "system", "content": system_message})
+        
         # Carregar conversa anterior se conversation_id foi fornecido
         if conversation_id:
             self._load_conversation(conversation_id)
-        elif system_message:
-            self.messages.append({"role": "system", "content": system_message})
     
     def add_user_message(self, content):
         """Adiciona uma mensagem do usuário ao contexto"""

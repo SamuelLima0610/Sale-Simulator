@@ -96,6 +96,7 @@ with st.sidebar:
         st.session_state.chat_history = []
         st.session_state.conversation_id = None
         st.session_state.feedback_received = False
+        st.session_state.clear_input = True
         st.rerun()
     
     st.markdown("---")
@@ -115,13 +116,13 @@ if not st.session_state.initialized:
     if st.session_state.use_mock:
         st.session_state.conversation = MockConversationContext(
             model="gpt-4o-mini",
-            system_message=SYSTEM_MESSAGE if not st.session_state.conversation_id else None,
+            system_message=SYSTEM_MESSAGE,
             conversation_id=st.session_state.conversation_id
         )
     else:
         st.session_state.conversation = ConversationContext(
             model="gpt-4o-mini",
-            system_message=SYSTEM_MESSAGE if not st.session_state.conversation_id else None,
+            system_message=SYSTEM_MESSAGE,
             conversation_id=st.session_state.conversation_id
         )
     
@@ -173,12 +174,21 @@ with chat_container:
 st.markdown("---")
 
 if not st.session_state.feedback_received:
+    # Flag para controlar limpeza do input
+    if "clear_input" not in st.session_state:
+        st.session_state.clear_input = False
+    
+    # Limpar input se flag estiver ativa (antes de criar o widget)
+    if st.session_state.clear_input:
+        st.session_state.clear_input = False
+        st.session_state.user_input_field = ""
+    
     col1, col2, col3 = st.columns([6, 2, 2])
     
     with col1:
         user_input = st.text_input(
             "Sua mensagem:",
-            key="user_input",
+            key="user_input_field",
             placeholder="Digite sua mensagem aqui...",
             label_visibility="collapsed"
         )
@@ -207,6 +217,8 @@ if not st.session_state.feedback_received:
                 "content": response
             })
         
+        # Marcar para limpar o campo de input no próximo rerun
+        st.session_state.clear_input = True
         st.rerun()
     
     # Processar solicitação de feedback
