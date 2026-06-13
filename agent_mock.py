@@ -38,16 +38,19 @@ class MockConversationContext:
         self.interaction_count += 1
         user_lower = user_message.lower()
         
-        # Detectar pedido de feedback
-        if "feedback" in user_lower or "avaliação" in user_lower or "análise" in user_lower:
+        # Detectar pedido de feedback (apenas se não for primeira interação)
+        if self.interaction_count > 1 and ("feedback" in user_lower or "avaliação" in user_lower or "análise" in user_lower):
             return self._generate_feedback()
         
-        # Primeira interação - resposta de interesse inicial com reservas
+        # Primeira interação - sempre resposta de cliente interessado
         if self.interaction_count == 1:
+            # Evitar que primeira mensagem seja interpretada como feedback
             responses = [
                 "Olá! Sim, estou buscando algo nessa área. Mas preciso entender melhor se realmente atende minhas necessidades. O que exatamente você está oferecendo?",
                 "Oi! Tenho interesse, mas já avaliei outras opções no mercado. O que torna sua solução diferente?",
-                "Bom dia! Estou pesquisando sim, mas meu orçamento é um pouco limitado. Me conta mais sobre o que você oferece?"
+                "Bom dia! Estou pesquisando sim, mas meu orçamento é um pouco limitado. Me conta mais sobre o que você oferece?",
+                "Olá! Estou interessado no que você tem para oferecer. Pode me explicar como funciona e quais são os benefícios principais?",
+                "Oi! Vi que vocês trabalham nessa área. Estou avaliando opções no mercado. Como vocês podem me ajudar especificamente?"
             ]
             return random.choice(responses)
         
@@ -160,6 +163,7 @@ class MockConversationContext:
             self.messages = [system_msg]
         else:
             self.messages = []
+        # Reset completo do contador de interações
         self.interaction_count = 0
     
     def get_context_size(self):

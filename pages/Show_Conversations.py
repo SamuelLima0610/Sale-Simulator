@@ -31,6 +31,24 @@ def formatar_data(data_str):
     except:
         return data_str
 
+def deletar_conversa(conversation_id):
+    """Deleta uma conversa específica do arquivo CSV"""
+    csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'dados.csv')
+    
+    try:
+        # Carregar dados atuais
+        df = pd.read_csv(csv_path)
+        
+        # Filtrar dados removendo a conversa específica
+        df_filtrado = df[df['conversation_id'] != conversation_id]
+        
+        # Salvar arquivo atualizado
+        df_filtrado.to_csv(csv_path, index=False)
+        
+        return True, f"Conversa {conversation_id} deletada com sucesso!"
+    except Exception as e:
+        return False, f"Erro ao deletar conversa: {str(e)}"
+
 def obter_resumo_conversas(df):
     """Obtém um resumo de todas as conversas"""
     # Obter primeira mensagem de cada conversa
@@ -63,7 +81,14 @@ def exibir_conversa(df, conversation_id):
     """Exibe as mensagens de uma conversa específica"""
     conversa = df[df['conversation_id'] == conversation_id].sort_index()
     
-    st.subheader(f"Conversa: {conversation_id}")
+    # Cabeçalho com título e botão de deletar
+    col_titulo, col_deletar = st.columns([3, 1])
+    with col_titulo:
+        st.subheader(f"Conversa: {conversation_id}")
+    with col_deletar:
+        if st.button("🗑️ Deletar Conversa", key=f"delete_single_{conversation_id}", type="secondary"):
+            st.session_state.conversa_para_deletar = conversation_id
+            st.rerun()
     
     # Informações da conversa
     col1, col2, col3, col4 = st.columns(4)
@@ -108,6 +133,10 @@ def exibir_conversa(df, conversation_id):
 st.title("💬 Visualizador de Conversas de Vendas")
 st.markdown("---")
 
+# Inicializar session state para controle da exclusão
+if 'dados_atualizados' not in st.session_state:
+    st.session_state.dados_atualizados = False
+
 df = carregar_conversas()
 
 if df is not None and not df.empty:
@@ -132,7 +161,7 @@ if df is not None and not df.empty:
         st.markdown("---")
         
         # Cabeçalho da tabela
-        header_cols = st.columns([2, 1.5, 1, 1, 1.2, 3, 1.5])
+        header_cols = st.columns([2, 1.5, 1, 1, 1.2, 2.5, 2])
         with header_cols[0]:
             st.markdown("**ID da Conversa**")
         with header_cols[1]:
@@ -146,13 +175,42 @@ if df is not None and not df.empty:
         with header_cols[5]:
             st.markdown("**Primeira Mensagem**")
         with header_cols[6]:
-            st.markdown("**Ação**")
+            st.markdown("**Ações**")
         
         st.markdown("---")
         
-        # Exibir cada conversa com botão
+        # Modal de confirmação para deletar conversa
+        if 'conversa_para_deletar' in st.session_state:
+            conversa_id = st.session_state.conversa_para_deletar
+            
+            st.warning(f"⚠️ **Confirmação de Exclusão**")
+            st.write(f"Tem certeza que deseja deletar a conversa **{conversa_id}**?")
+            st.write("Esta ação não pode ser desfeita e todas as mensagens da conversa serão removidas permanentemente.")
+            
+            col1, col2, col3 = st.columns([1, 1, 2])
+            
+            with col1:
+                if st.button("✅ Confirmar", type="primary"):
+                    sucesso, mensagem = deletar_conversa(conversa_id)
+                    if sucesso:
+                        st.success(mensagem)
+                        # Limpar session state e marcar dados como atualizados
+                        del st.session_state.conversa_para_deletar
+                        st.session_state.dados_atualizados = True
+                        st.rerun()
+                    else:
+                        st.error(mensagem)
+            
+            with col2:
+                if st.button("❌ Cancelar"):
+                    del st.session_state.conversa_para_deletar
+                    st.rerun()
+            
+            st.markdown("---")
+        
+        # Exibir cada conversa com botões
         for idx, row in resumo.iterrows():
-            cols = st.columns([2, 1.5, 1, 1, 1.2, 3, 1.5])
+            cols = st.columns([2, 1.5, 1, 1, 1.2, 2.5, 2])
             
             with cols[0]:
                 st.text(row['conversation_id'])
@@ -167,18 +225,56 @@ if df is not None and not df.empty:
             with cols[5]:
                 st.text(row['Primeira Mensagem'])
             with cols[6]:
-                if st.button("🔄 Simular", key=f"btn_{row['conversation_id']}"):
-                    # Carregar conversa no simulador (página principal)
-                    st.session_state.conversation_id = row['conversation_id']
-                    st.session_state.initialized = False
-                    st.session_state.chat_history = []
-                    st.session_state.feedback_received = False
-                    st.switch_page("main.py")
+                # Criar duas colunas para os botões
+                btn_cols = st.columns(2)
+                with btn_cols[0]:
+                    if st.button("🔄 Simular", key=f"btn_simular_{row['conversation_id']}"):
+                        # Carregar conversa no simulador (página principal)
+                        st.session_state.conversation_id = row['conversation_id']
+                        st.session_state.initialized = False
+                        st.session_state.chat_history = []
+                        st.session_state.feedback_received = False
+                        st.switch_page("Conversation.py")
+                
+                with btn_cols[1]:
+                    if st.button("🗑️ Deletar", key=f"btn_deletar_{row['conversation_id']}", type="secondary"):
+                        # Armazenar ID da conversa para confirmar exclusão
+                        st.session_state.conversa_para_deletar = row['conversation_id']
+                        st.rerun()
             
             st.markdown("<hr style='margin: 5px 0;'>", unsafe_allow_html=True)
     
     with tab2:
         st.subheader("Selecione uma Conversa")
+        
+        # Modal de confirmação para deletar conversa (também na aba 2)
+        if 'conversa_para_deletar' in st.session_state:
+            conversa_id = st.session_state.conversa_para_deletar
+            
+            st.warning(f"⚠️ **Confirmação de Exclusão**")
+            st.write(f"Tem certeza que deseja deletar a conversa **{conversa_id}**?")
+            st.write("Esta ação não pode ser desfeita e todas as mensagens da conversa serão removidas permanentemente.")
+            
+            col1, col2, col3 = st.columns([1, 1, 2])
+            
+            with col1:
+                if st.button("✅ Confirmar", type="primary", key="confirm_tab2"):
+                    sucesso, mensagem = deletar_conversa(conversa_id)
+                    if sucesso:
+                        st.success(mensagem)
+                        # Limpar session state e marcar dados como atualizados
+                        del st.session_state.conversa_para_deletar
+                        st.session_state.dados_atualizados = True
+                        st.rerun()
+                    else:
+                        st.error(mensagem)
+            
+            with col2:
+                if st.button("❌ Cancelar", key="cancel_tab2"):
+                    del st.session_state.conversa_para_deletar
+                    st.rerun()
+            
+            st.markdown("---")
         
         # Lista de IDs de conversas
         conversation_ids = df['conversation_id'].unique().tolist()

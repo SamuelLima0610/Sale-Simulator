@@ -4,7 +4,13 @@ from agent_mock import MockConversationContext
 
 # System message otimizado para simular um comprador realista
 SYSTEM_MESSAGE = """
-Você é um comprador potencial interessado em avaliar produtos ou serviços. Seu papel é participar de uma simulação de venda realista.
+Você é um COMPRADOR POTENCIAL interessado em avaliar produtos ou serviços. Seu papel é participar de uma simulação de venda realística sendo SEMPRE O CLIENTE que está considerando uma compra.
+
+## IMPORTANTE - SEU PAPEL:
+- VOCÊ É O CLIENTE/COMPRADOR, NUNCA O VENDEDOR
+- O usuário que está conversando com você é o VENDEDOR
+- Você está interessado em possivelmente comprar algo, mas precisa ser convencido
+- NUNCA ofereça produtos ou serviços - você está do lado de quem compra
 
 ## SEU PERFIL E COMPORTAMENTO:
 - Você é um comprador criterioso, mas aberto a ofertas convincentes
@@ -23,6 +29,8 @@ Você é um comprador potencial interessado em avaliar produtos ou serviços. Se
 4. Avalie como o vendedor lida com suas objeções
 5. Observe se o vendedor: escuta ativamente, identifica suas necessidades, apresenta soluções, cria rapport, usa técnicas de vendas
 6. Mantenha o tom realista - nem muito fácil nem impossível de convencer
+
+## LEMBRE-SE: VOCÊ É SEMPRE O CLIENTE QUE QUER COMPRAR, NUNCA O VENDEDOR QUE ESTÁ VENDENDO
 
 ## QUANDO O VENDEDOR PEDIR FEEDBACK:
 Forneça uma análise estruturada em português com as seguintes seções:
@@ -88,15 +96,17 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # (Removido) Interface para carregar conversa anterior por ID
-    
     if st.button("🔄 Nova Conversa", use_container_width=True):
+        # Reset completo do estado para nova conversa
         st.session_state.initialized = False
         st.session_state.conversation = None
         st.session_state.chat_history = []
         st.session_state.conversation_id = None
         st.session_state.feedback_received = False
         st.session_state.clear_input = True
+        # Garantir que qualquer resíduo de conversa anterior seja limpo
+        if 'user_input_field' in st.session_state:
+            del st.session_state.user_input_field
         st.rerun()
     
     st.markdown("---")
@@ -113,36 +123,53 @@ with st.sidebar:
 
 # Inicializar conversa
 if not st.session_state.initialized:
-    if st.session_state.use_mock:
-        st.session_state.conversation = MockConversationContext(
-            model="gpt-4o-mini",
-            system_message=SYSTEM_MESSAGE,
-            conversation_id=st.session_state.conversation_id
-        )
+    # Garantir que para nova conversa, conversation_id seja None
+    if st.session_state.conversation_id is None:
+        # Nova conversa - garantir contexto limpo
+        if st.session_state.use_mock:
+            st.session_state.conversation = MockConversationContext(
+                model="gpt-4o-mini",
+                system_message=SYSTEM_MESSAGE,
+                conversation_id=None
+            )
+        else:
+            st.session_state.conversation = ConversationContext(
+                model="gpt-4o-mini",
+                system_message=SYSTEM_MESSAGE,
+                conversation_id=None
+            )
     else:
-        st.session_state.conversation = ConversationContext(
-            model="gpt-4o-mini",
-            system_message=SYSTEM_MESSAGE,
-            conversation_id=st.session_state.conversation_id
-        )
-    
-    # Carregar histórico de chat se conversa anterior foi carregada
-    if st.session_state.conversation_id:
-        # Extrair mensagens do histórico (excluindo system message)
-        loaded_count = 0
-        for msg in st.session_state.conversation.messages:
-            if msg["role"] == "system":
-                continue
-            st.session_state.chat_history.append({
-                "role": msg["role"],
-                "content": msg["content"]
-            })
-            loaded_count += 1
+        # Carregando conversa existente
+        if st.session_state.use_mock:
+            st.session_state.conversation = MockConversationContext(
+                model="gpt-4o-mini",
+                system_message=SYSTEM_MESSAGE,
+                conversation_id=st.session_state.conversation_id
+            )
+        else:
+            st.session_state.conversation = ConversationContext(
+                model="gpt-4o-mini",
+                system_message=SYSTEM_MESSAGE,
+                conversation_id=st.session_state.conversation_id
+            )
         
-        # Verificar se realmente carregou mensagens
-        if loaded_count == 0:
-            st.warning(f"⚠️ Nenhuma conversa encontrada para o ID: {st.session_state.conversation_id}")
-            st.session_state.conversation_id = None
+        # Carregar histórico de chat se conversa anterior foi carregada
+        if st.session_state.conversation_id:
+            # Extrair mensagens do histórico (excluindo system message)
+            loaded_count = 0
+            for msg in st.session_state.conversation.messages:
+                if msg["role"] == "system":
+                    continue
+                st.session_state.chat_history.append({
+                    "role": msg["role"],
+                    "content": msg["content"]
+                })
+                loaded_count += 1
+            
+            # Verificar se realmente carregou mensagens
+            if loaded_count == 0:
+                st.warning(f"⚠️ Nenhuma conversa encontrada para o ID: {st.session_state.conversation_id}")
+                st.session_state.conversation_id = None
     
     st.session_state.initialized = True
 

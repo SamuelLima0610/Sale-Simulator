@@ -1,14 +1,16 @@
 # Simulador de Vendas com IA
 
-Sistema de treinamento de vendas usando IA que simula um comprador realista e fornece feedback detalhado.
+Sistema de treinamento de vendas usando IA que simula um comprador realista e fornece feedback detalhado através de uma interface web moderna.
 
 ## 🚀 Funcionalidades
 
+- **Interface Web Moderna**: Aplicação Streamlit com interface intuitiva
 - **Modo Real**: Usa GPT-4o-mini da OpenAI para conversas realistas
 - **Modo Teste**: Simulações GRATUITAS sem necessidade de API
-- **Gravação de Áudio**: Grave sua fala ao invés de digitar (usa Whisper para transcrição)
 - **Feedback Detalhado**: Receba avaliação completa do seu processo de venda
-- **Histórico de Contexto**: A IA lembra toda a conversa
+- **Histórico de Contexto**: A IA lembra toda a conversa durante a sessão
+- **Visualização de Conversas**: Acompanhe histórico completo de todas as sessões
+- **Armazenamento de Dados**: Sistema de persistência em CSV para análise posterior
 
 ## 📋 Pré-requisitos
 
@@ -25,61 +27,64 @@ Sistema de treinamento de vendas usando IA que simula um comprador realista e fo
 pip install -r requirements.txt
 ```
 
-**Nota:** No Windows, o `sounddevice` pode precisar de configuração adicional. Se tiver problemas, instale:
-```bash
-pip install sounddevice --upgrade
+3. **Configure a chave da OpenAI (apenas para modo real):**
+
+Crie um arquivo `.env` na pasta raiz do projeto:
+```env
+OPEN=sua-chave-api-aqui
 ```
 
-3. **Configure a chave da OpenAI (apenas para modo real):**
+**Alternativa:** Use variáveis de ambiente:
 
 Windows (PowerShell):
 ```powershell
-$env:OPENAI_API_KEY="sua-chave-aqui"
+$env:OPEN="sua-chave-aqui"
 ```
 
 Linux/Mac:
 ```bash
-export OPENAI_API_KEY="sua-chave-aqui"
+export OPEN="sua-chave-aqui"
 ```
 
 ## 🎯 Como Usar
 
 Execute o simulador:
 ```bash
-python main.py
+streamlit run Conversation.py
 ```
 
-### Opções durante a conversa:
+A aplicação abrirá automaticamente no seu navegador (geralmente em `http://localhost:8501`).
 
-- **Digite normalmente**: Sua mensagem de vendas
-- **Digite "VOZ"**: Grava um áudio e transcreve automaticamente
-- **Digite "FEEDBACK"**: Recebe avaliação completa do processo
+### Opções na interface web:
 
-### Exemplo de uso com áudio:
+1. **Sidebar (Configurações):**
+   - **Modo Teste**: Respostas simuladas gratuitas
+   - **Modo Real**: Usa API da OpenAI (requer configuração)
+   - **Nova Conversa**: Reinicia a sessão de treinamento
 
-```
-Você (vendedor): VOZ
-Preparando gravação...
-Duração da gravação em segundos (padrão 5): 7
-🎤 Gravando por 7 segundos...
-✓ Gravação concluída!
-📝 Transcrevendo áudio...
-✓ Transcrição concluída!
+2. **Chat Principal:**
+   - Digite suas mensagens de venda normalmente
+   - **Digite "FEEDBACK"**: Recebe avaliação completa do processo
+   - **Visualizar Conversas**: Acesse o histórico na sidebar
 
-📝 Transcrição: "Olá! Como posso ajudá-lo hoje?"
+### Navegação:
 
-Comprador: Olá! Estou buscando uma solução para...
-```
+- **Página Principal**: Simulador de vendas interativo
+- **Visualizar Conversas**: Histórico completo de todas as sessões com métricas
 
 ## 📁 Estrutura do Projeto
 
 ```
-projeto-ia/
-├── agent.py              # Classe principal de conversa (API real)
-├── agent_mock.py         # Classe simulada (gratuita)
-├── audio_recorder.py     # Gravação e transcrição de áudio
-├── main.py              # Interface principal
-└── requirements.txt     # Dependências
+sales-simulator/
+├── Conversation.py           # Interface principal Streamlit
+├── agent.py                  # Classe de conversa com API OpenAI
+├── agent_mock.py            # Classe simulada (modo gratuito)
+├── csv_reader.py            # Gerenciador de dados CSV
+├── requirements.txt         # Dependências do projeto
+├── data/
+│   └── dados.csv           # Armazenamento das conversas
+└── pages/
+    └── Show_Conversations.py # Visualização do histórico
 ```
 
 ## 🎓 Dicas de Treinamento
@@ -100,26 +105,59 @@ O comprador IA foi programado para:
 
 ## 🐛 Solução de Problemas
 
-**Erro de microfone no Windows:**
-- Verifique se o microfone está conectado e habilitado nas configurações do Windows
-- Execute: `pip install sounddevice --upgrade`
+**Erro ao iniciar o Streamlit:**
+- Verifique se todas as dependências foram instaladas: `pip install -r requirements.txt`
+- Certifique-se de estar na pasta correta do projeto
 
-**Erro de API OpenAI:**
-- Verifique se a variável de ambiente `OPENAI_API_KEY` está configurada
-- Use o Modo Teste (opção 2) para treinar sem custos
+**Erro de API OpenAI (Modo Real):**
+- Verifique se a variável de ambiente `OPEN` está configurada no arquivo `.env`
+- Use o Modo Teste para treinar sem custos
+- Confirme se sua chave API está válida e tem créditos
 
-**Erro de transcrição:**
-- O Whisper precisa de áudio claro
-- Fale próximo ao microfone
-- Evite ambientes ruidosos
+**Erro de carregamento de dados:**
+- O arquivo `dados.csv` será criado automaticamente na pasta `data/`
+- Verifique se o usuário tem permissões de escrita na pasta do projeto
+
+**Interface não abre no navegador:**
+- Acesse manualmente: `http://localhost:8501`
+- Verifique se a porta 8501 não está sendo usada por outra aplicação
 
 ## 💰 Custos
 
 - **Modo Teste**: Gratuito (respostas simuladas)
 - **Modo Real**: 
   - GPT-4o-mini: ~$0.15 / 1M tokens de entrada, ~$0.60 / 1M tokens de saída
-  - Whisper: ~$0.006 / minuto de áudio
+  - Custo típico por sessão de treinamento: $0.01 - $0.05
+
+## ℹ️ Funcionalidades
+
+### Sistema de Feedback Inteligente
+O comprador IA avalia automaticamente:
+- Rapport e conexão inicial
+- Identificação de necessidades
+- Apresentação de benefícios
+- Tratamento de objeções
+- Técnicas de fechamento
+- Comunicação geral
+
+### Armazenamento de Dados
+- Todas as conversas são salvas automaticamente
+- Métricas de uso de tokens e custos (modo real)
+- Histórico completo acessível na interface web
 
 ## 📝 Licença
 
 Projeto educacional para treinamento de vendas.
+
+## 🔮 Próximas Funcionalidades
+
+Funcionalidades planejadas para futuras versões:
+- Gravação e transcrição de áudio com Whisper
+- Dashboard analítico com métricas de performance
+- Múltiplos personas de compradores
+- Integração com CRM
+- Relatórios detalhados de progresso
+
+---
+
+*Desenvolvido para aprimorar técnicas de vendas através de simulações realistas com IA*
